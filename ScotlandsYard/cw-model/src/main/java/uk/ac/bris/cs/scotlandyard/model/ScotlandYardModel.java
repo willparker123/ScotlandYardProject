@@ -36,6 +36,7 @@ import java.util.NoSuchElementException;
 
 public class ScotlandYardModel implements ScotlandYardGame, Consumer<Move>, MoveVisitor {
 
+<<<<<<< HEAD
 	//initialising variables for model
 	public List<Boolean> rounds;
 	public ImmutableGraph<Integer, Transport> graph;
