@@ -334,15 +334,13 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer<Move>, Move
 				update(this, tm);
 			}
 		}
-		cplayer.removeTicket(move.firstMove().ticket());
 		currentRoundIndex++;
-		update(this, getCurrentRound());
+		cplayer.removeTicket(move.firstMove().ticket());
 		dbMove = false;
 		dbMoveRound = true;
 		this.visit(move.firstMove());
 		cplayer.removeTicket(move.secondMove().ticket());
 		currentRoundIndex++;
-		update(this,getCurrentRound()) ;
 		dbMove = true;
 		this.visit(move.secondMove());
 		dbMove = false;
@@ -358,7 +356,13 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer<Move>, Move
 			if (currentPlayerIndex+1<players.size()) {
 				if (!dbMove) currentPlayerIndex++;
 			} else currentPlayerIndex = 0;
-			update(this, move);
+			if(isGameOver()){
+				update(this,move) ;
+				update(this,getWinningPlayers()) ;
+			}
+			else{
+				update(this, move);
+			}
 		} else if (cplayer.colour().isMrX()) {
 			if (dbMoveRound) {
 				if (rounds.get(getCurrentRound()-1)) {
@@ -374,16 +378,33 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer<Move>, Move
 				if (!dbMoveRound) currentPlayerIndex = 0;
 			}
 			if(dbMoveRound) {
-				TicketMove tm = new TicketMove(move.colour(), move.ticket(), mrXLastLocation);
-				update(this, tm);
+				if(!dbMove){
+					TicketMove tm = new TicketMove(move.colour(), move.ticket(), mrXLastLocation);
+					update(this, getCurrentRound());
+					update(this, tm);
+					if (isGameOver()) {
+						update(this, getWinningPlayers());
+					}
+
+				}
+				else {
+					TicketMove tm = new TicketMove(move.colour(), move.ticket(), mrXLastLocation);
+					update(this, getCurrentRound()) ;
+					update(this, tm);
+					if (isGameOver()) {
+						update(this, getWinningPlayers());
+					}
+				}
 			}
 			if (!dbMoveRound) {
 				cplayer.removeTicket(move.ticket());
 				currentRoundIndex++;
 				TicketMove tm = new TicketMove(move.colour(), move.ticket(), mrXLastLocation);
 				update(this, getCurrentRound());
+				if(isGameOver()){
+					update(this,getWinningPlayers()) ;
+				}
 				update(this, tm) ;
-
 			}
 		}
 	}
@@ -396,17 +417,16 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer<Move>, Move
 			waitingForCallback = false;
 			currentPlayerIndex = 0;
 			for (ScotlandYardPlayer p : players) {
-				if (!waitingForCallback) {
+				if (!waitingForCallback && !isGameOver()) {
 					waitingForCallback = true;
 					ScotlandYardPlayer cplayer = players.get(currentPlayerIndex);
 					Set<Move> cplayerMoves = getValidMoves(cplayer);
 					cplayer.player().makeMove(this, cplayer.location(), Objects.requireNonNull(cplayerMoves), this);
 				}
 			}
-			if(isGameOver()){
-				update(this,getWinningPlayers()) ;
+			if (!waitingForCallback && !isGameOver()) {
+				update(this);
 			}
-			else if (!waitingForCallback) update(this);
 		} else throw new IllegalStateException("Cannot start rotation if game is already over.");
 	}
 
@@ -424,6 +444,7 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer<Move>, Move
 			move.visit(this);
 			waitingForCallback = false;
 			dbMove = false;
+
 		}
 	}
 
@@ -519,12 +540,10 @@ public class ScotlandYardModel implements ScotlandYardGame, Consumer<Move>, Move
 			return true;
 		} else if (destinationHasPlayer(players.get(0).location())) { //if mrX is caught
 			setWinners.addAll(getPlayers());
-			setWinners.remove(BLACK);
-			getWinningPlayers();
+			setWinners.remove(BLACK) ;
 			return true;
 		} else if (currentRoundIndex >=rounds.size() && currentPlayerIndex == 0) {
 			setWinners.add(BLACK) ;
-			getWinningPlayers() ;
 			return true;
 		} else return false;
 	}
